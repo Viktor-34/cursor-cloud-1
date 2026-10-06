@@ -1,9 +1,9 @@
 /*!
- * Gr8r Studio styles
+ * CRM styles
  * Extracted from https://gr8r-studio.vercel.app/ (static stylesheet, no framework).
  *
  * Подключение:
- *   <link rel="stylesheet" href="styles/gr8r.css">
+ *   <link rel="stylesheet" href="src/styles/crm.css">
  *
  * Шрифты Geist и Geist Mono подключаются через @import в этом файле.
  *

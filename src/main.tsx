@@ -3,7 +3,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "@tanstack/react-router";
 import { router } from "./router";
-import "./styles/gr8r.css";
+import "./styles/crm.css";
 import "./styles/app.css";
 
 const queryClient = new QueryClient();

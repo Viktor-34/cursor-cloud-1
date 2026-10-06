@@ -34,7 +34,7 @@ export type WorkspaceSnapshot = {
 export const demoWorkspace: WorkspaceSnapshot = {
   source: "seed",
   user: { name: "Alex Morgan", firstName: "Alex", initials: "AM", title: "Head of Product" },
-  workspace: { name: "Gr8r Studio" },
+  workspace: { name: "CRM" },
   stats: {
     activeProjects: 5,
     atRisk: 1,

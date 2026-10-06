@@ -61,8 +61,8 @@ export function Shell({ children }: { children: ReactNode }) {
       <aside className="side">
         <div className="side-top">
           <button className="ws" type="button" onClick={() => { closeMenu(); void navigate({ to: "/" }); }}>
-            <span className="ws-logo brand">g</span>
-            <span className="ws-name trunc">Gr8r Studio</span>
+            <span className="ws-logo brand">c</span>
+            <span className="ws-name trunc">CRM</span>
           </button>
         </div>
         <div className="side-scroll">
@@ -99,7 +99,7 @@ export function Shell({ children }: { children: ReactNode }) {
             <Menu size={16} className="i" />
           </button>
           <div className="crumbs">
-            <span className="cur">Gr8r Studio</span>
+            <span className="cur">CRM</span>
           </div>
           <span className="sp" />
           <button className="topsearch" type="button">
