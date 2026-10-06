@@ -97,6 +97,20 @@ a.project-name:hover,
   .task-fields { grid-template-columns: 1fr; }
 }
 
+.cal { overflow: auto; }
+.cday { min-height: 0; }
+
+@media (max-width: 640px) {
+  .cal .cev {
+    height: auto;
+    min-height: 22px;
+    padding: 0 6px;
+    border-radius: 5px;
+    background: color-mix(in srgb, var(--c) 11%, var(--surface));
+  }
+  .cal .cev .trunc { display: block; }
+}
+
 @media (max-width: 640px) {
   .task-add { flex-wrap: wrap; }
   .task-add .select, .task-add .btn { width: 100%; }
