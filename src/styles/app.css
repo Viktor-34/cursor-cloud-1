@@ -21,3 +21,20 @@
 .bottomnav a.on { color: var(--text); }
 
 .prog.stat-prog { flex: none; width: 72px; }
+
+.task-add {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.task-add .input { flex: 1; width: auto; }
+.task-add .select { width: 190px; flex-shrink: 0; }
+.trow .select { height: var(--h-sm); font-size: var(--fs-xs); }
+
+@media (max-width: 640px) {
+  .task-add { flex-wrap: wrap; }
+  .task-add .select, .task-add .btn { width: 100%; }
+}

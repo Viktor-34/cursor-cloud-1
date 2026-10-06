@@ -13,7 +13,7 @@ export function MyTasksPage() {
             </div>
           </header>
           <section className="panel">
-            <TaskList tasks={data.tasks} />
+            <TaskList tasks={data.tasks} projects={data.projects} />
           </section>
         </div>
       )}

@@ -25,7 +25,7 @@ export function HomePage() {
               <div className="panel-h">
                 <h2>My tasks</h2>
               </div>
-              <TaskList tasks={data.tasks} />
+              <TaskList tasks={data.tasks} projects={data.projects} />
             </section>
             <section className="panel">
               <div className="panel-h">
