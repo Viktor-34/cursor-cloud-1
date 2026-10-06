@@ -80,11 +80,13 @@ function TaskEditor({
       setTitle(task.title);
       return;
     }
+    setTitle(next);
     if (next !== task.title) update.mutate({ id: task.id, title: next });
   }
 
   function saveDescription() {
     const next = description.trim();
+    setDescription(next);
     if (next !== task.description) update.mutate({ id: task.id, description: next });
   }
 
