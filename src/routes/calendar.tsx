@@ -87,7 +87,7 @@ function Month({
               .sort((a, b) => Number(a.status === "done") - Number(b.status === "done") || a.title.localeCompare(b.title));
             const className = ["cday", cell.inMonth ? "" : "out", cell.iso === today ? "today" : ""].filter(Boolean).join(" ");
             return (
-              <div key={cell.iso} className={className}>
+              <div key={cell.iso} className={className} data-iso={cell.iso}>
                 <span className="dn">{cell.day}</span>
                 {dayTasks.map((task) => (
                   <button
@@ -105,9 +105,45 @@ function Month({
             );
           })}
         </div>
+        <Agenda tasks={inMonth} onOpen={openTask} />
       </div>
     </div>
   );
+}
+
+function Agenda({ tasks, onOpen }: { tasks: WorkspaceTask[]; onOpen: (id: string) => void }) {
+  const groups = new Map<string, WorkspaceTask[]>();
+  for (const task of [...tasks].sort((a, b) => (a.dueOn ?? "").localeCompare(b.dueOn ?? "") || a.title.localeCompare(b.title))) {
+    const key = task.dueOn ?? "";
+    groups.set(key, [...(groups.get(key) ?? []), task]);
+  }
+
+  return (
+    <section className="cal-agenda" aria-label="Deadlines this month">
+      {[...groups].map(([iso, dayTasks]) => (
+        <div key={iso}>
+          <h2>{dayLabel(iso)}</h2>
+          {dayTasks.map((task) => (
+            <button
+              key={task.id}
+              className={task.status === "done" ? "cev done" : "cev"}
+              type="button"
+              style={{ ["--c" as string]: task.overdue ? "var(--red)" : avatarColor(task.projectId) }}
+              onClick={() => onOpen(task.id)}
+            >
+              <span className="trunc">{task.title}</span>
+              <span className="faint">{task.project}</span>
+            </button>
+          ))}
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function dayLabel(iso: string) {
+  const [year, month, day] = iso.split("-").map(Number);
+  return new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }).format(new Date(year, month - 1, day));
 }
 
 function monthCells(year: number, month: number) {

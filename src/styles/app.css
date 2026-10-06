@@ -100,15 +100,24 @@ a.project-name:hover,
 .cal { overflow: auto; }
 .cday { min-height: 0; }
 
+.cal-agenda { display: none; }
+
 @media (max-width: 640px) {
-  .cal .cev {
-    height: auto;
-    min-height: 22px;
-    padding: 0 6px;
-    border-radius: 5px;
-    background: color-mix(in srgb, var(--c) 11%, var(--surface));
+  .cal-agenda {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 8px 16px 88px;
   }
-  .cal .cev .trunc { display: block; }
+  .cal-agenda h2 {
+    margin: 8px 0 0;
+    font-size: var(--fs-sm);
+    font-weight: 600;
+  }
+  .cal-agenda .cev { height: 32px; }
+  .cal-agenda .cev .trunc,
+  .cal-agenda .cev .faint { display: block; }
+  .cal-agenda .cev .faint { margin-left: auto; flex-shrink: 0; }
 }
 
 @media (max-width: 640px) {
