@@ -61,6 +61,7 @@ export const tasks = pgTable("tasks", {
     .notNull()
     .references(() => projects.id),
   title: text().notNull(),
+  description: text(),
   status: taskStatus().notNull().default("todo"),
   dueOn: date("due_on"),
   assigneeId: uuid("assignee_id").references(() => members.id),

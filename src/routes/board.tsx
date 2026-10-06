@@ -1,9 +1,11 @@
 import { Link, useParams } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
-import { useState, type DragEvent, type FormEvent } from "react";
+import { useRef, useState, type DragEvent, type FormEvent } from "react";
 import { taskStatusLabel, taskStatuses, type TaskStatus, type WorkspaceTask } from "../../shared/workspace";
+import { avatarColor } from "../app/avatar";
 import { WorkspaceGate } from "../app/gate";
-import { useCreateTask, useUpdateTaskStatus } from "../data/workspace";
+import { useOpenTask } from "../app/task-drawer";
+import { useCreateTask, useUpdateTask } from "../data/workspace";
 
 const statusColor: Record<TaskStatus, string> = {
   backlog: "var(--st-backlog)",
@@ -55,7 +57,9 @@ export function ProjectBoardPage() {
 }
 
 function Board({ projectId, tasks }: { projectId: string; tasks: WorkspaceTask[] }) {
-  const updateStatus = useUpdateTaskStatus();
+  const updateTask = useUpdateTask();
+  const openTask = useOpenTask();
+  const dragged = useRef(false);
   const [over, setOver] = useState<TaskStatus | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
 
@@ -67,12 +71,12 @@ function Board({ projectId, tasks }: { projectId: string; tasks: WorkspaceTask[]
     if (!id) return;
     const task = tasks.find((item) => item.id === id);
     if (!task || task.status === status) return;
-    updateStatus.mutate({ id, status });
+    updateTask.mutate({ id, status });
   }
 
   return (
     <>
-      {updateStatus.isError ? <p className="err board-error">{updateStatus.error.message}</p> : null}
+      {updateTask.isError ? <p className="err board-error">{updateTask.error.message}</p> : null}
       <div className="board">
       {taskStatuses.map((status) => {
         const columnTasks = tasks.filter((task) => task.status === status);
@@ -105,7 +109,14 @@ function Board({ projectId, tasks }: { projectId: string; tasks: WorkspaceTask[]
                     draggingId === task.id ? "kcard dragging" : task.status === "done" ? "kcard done" : "kcard"
                   }
                   draggable
+                  onClick={(event) => {
+                    if (dragged.current) return;
+                    const target = event.target as HTMLElement;
+                    if (target.closest("select, button, textarea, input, a")) return;
+                    openTask(task.id);
+                  }}
                   onDragStart={(event) => {
+                    dragged.current = true;
                     event.dataTransfer.setData("text/plain", task.id);
                     event.dataTransfer.effectAllowed = "move";
                     setDraggingId(task.id);
@@ -113,19 +124,29 @@ function Board({ projectId, tasks }: { projectId: string; tasks: WorkspaceTask[]
                   onDragEnd={() => {
                     setDraggingId(null);
                     setOver(null);
+                    window.setTimeout(() => {
+                      dragged.current = false;
+                    }, 0);
                   }}
                 >
                   <div className="title">{task.title}</div>
+                  {task.description ? <p className="desc">{task.description}</p> : null}
                   <div className="meta">
                     <span className={task.overdue ? "due over" : task.due === "Today" ? "due soon" : "due"}>{task.due}</span>
+                    {task.assigneeInitials ? (
+                      <span className="av" style={{ ["--c" as string]: avatarColor(task.assigneeId ?? task.assigneeInitials) }} title={task.assigneeName ?? undefined}>
+                        {task.assigneeInitials}
+                      </span>
+                    ) : null}
                     <select
                       className="select status-move"
                       aria-label={`Move ${task.title}`}
                       value={task.status}
                       onPointerDown={(event) => event.stopPropagation()}
+                      onClick={(event) => event.stopPropagation()}
                       onChange={(event) => {
                         const next = event.target.value as TaskStatus;
-                        if (next !== task.status) updateStatus.mutate({ id: task.id, status: next });
+                        if (next !== task.status) updateTask.mutate({ id: task.id, status: next });
                       }}
                     >
                       {taskStatuses.map((option) => (

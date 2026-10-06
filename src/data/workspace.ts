@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { TaskStatus, WorkspaceSnapshot, WorkspaceTask } from "../../shared/workspace";
+import { dayDiff, formatDue, localIso } from "../../db/dates";
+import type { TaskPatch, TaskStatus, WorkspaceMember, WorkspaceSnapshot, WorkspaceTask } from "../../shared/workspace";
 
 export function useWorkspace() {
   return useQuery({
@@ -27,14 +28,15 @@ export function useCreateTask() {
   });
 }
 
-export function useUpdateTaskStatus() {
+export function useUpdateTask() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { id: string; status: TaskStatus }) => {
-      const response = await fetch(`/api/tasks/${input.id}`, {
+    mutationFn: async (input: { id: string } & TaskPatch) => {
+      const { id, ...patch } = input;
+      const response = await fetch(`/api/tasks/${id}`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ status: input.status }),
+        body: JSON.stringify(patch),
       });
       if (!response.ok) throw new Error(await errorMessage(response));
     },
@@ -43,12 +45,14 @@ export function useUpdateTaskStatus() {
       const previous = queryClient.getQueryData<WorkspaceSnapshot>(["workspace"]);
       queryClient.setQueryData<WorkspaceSnapshot>(["workspace"], (current) => {
         if (!current) return current;
-        const move = (task: WorkspaceTask) =>
-          task.id === input.id ? { ...task, status: input.status, overdue: input.status === "done" ? false : task.overdue } : task;
+        const today = localIso();
+        const next = applyPatch(current.allTasks.find((task) => task.id === input.id), input, current.members ?? [], today);
+        if (!next) return current;
+        const mine = (current.tasks ?? []).filter((task) => task.id !== next.id);
         return {
           ...current,
-          tasks: current.tasks.map(move),
-          allTasks: (current.allTasks ?? []).map(move),
+          tasks: next.assigneeId === current.user.memberId ? [...mine, next] : mine,
+          allTasks: current.allTasks.map((task) => (task.id === next.id ? next : task)),
         };
       });
       return { previous };
@@ -58,6 +62,26 @@ export function useUpdateTaskStatus() {
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["workspace"] }),
   });
+}
+
+function applyPatch(task: WorkspaceTask | undefined, patch: { id: string } & TaskPatch, members: WorkspaceMember[], today: string) {
+  if (!task) return undefined;
+  const next: WorkspaceTask = { ...task };
+  if (patch.status !== undefined) next.status = patch.status;
+  if (patch.title !== undefined) next.title = patch.title.trim();
+  if (patch.description !== undefined) next.description = patch.description?.trim() ?? "";
+  if (patch.dueOn !== undefined) {
+    next.dueOn = patch.dueOn;
+    next.due = formatDue(patch.dueOn, today);
+  }
+  if (patch.assigneeId !== undefined) {
+    const member = members.find((item) => item.id === patch.assigneeId);
+    next.assigneeId = member?.id ?? null;
+    next.assigneeName = member?.name ?? null;
+    next.assigneeInitials = member?.initials ?? null;
+  }
+  next.overdue = Boolean(next.dueOn && next.status !== "done" && dayDiff(next.dueOn, today) < 0);
+  return next;
 }
 
 async function errorMessage(response: Response) {

@@ -1,13 +1,15 @@
 import type { CSSProperties, FormEvent } from "react";
 import { useState } from "react";
 import { taskStatusLabel, taskStatuses, type TaskStatus, type WorkspaceProject, type WorkspaceTask } from "../../shared/workspace";
-import { useCreateTask, useUpdateTaskStatus } from "../data/workspace";
+import { useOpenTask } from "../app/task-drawer";
+import { useCreateTask, useUpdateTask } from "../data/workspace";
 
 const columns = "minmax(0,1.6fr) 150px 132px 88px";
 
 export function TaskList({ tasks, projects }: { tasks: WorkspaceTask[]; projects: WorkspaceProject[] }) {
   const createTask = useCreateTask();
-  const updateStatus = useUpdateTaskStatus();
+  const updateTask = useUpdateTask();
+  const openTask = useOpenTask();
   const [title, setTitle] = useState("");
   const [projectId, setProjectId] = useState(projects[0]?.id ?? "");
 
@@ -51,7 +53,7 @@ export function TaskList({ tasks, projects }: { tasks: WorkspaceTask[]; projects
         {tasks.map((task) => (
           <div className={task.status === "done" ? "trow done" : "trow"} key={task.id}>
             <div className="ttl">
-              <span className="tt">{task.title}</span>
+              <button className="tt" type="button" onClick={() => openTask(task.id)}>{task.title}</button>
             </div>
             <div className="muted trunc">{task.project}</div>
             <div>
@@ -59,10 +61,10 @@ export function TaskList({ tasks, projects }: { tasks: WorkspaceTask[]; projects
                 className="select"
                 aria-label={`Status for ${task.title}`}
                 value={task.status}
-                disabled={updateStatus.isPending && updateStatus.variables?.id === task.id}
+                disabled={updateTask.isPending && updateTask.variables?.id === task.id}
                 onChange={(event) => {
                   const status = event.target.value as TaskStatus;
-                  updateStatus.mutate({ id: task.id, status });
+                  updateTask.mutate({ id: task.id, status });
                 }}
               >
                 {taskStatuses.map((status) => (
@@ -74,7 +76,7 @@ export function TaskList({ tasks, projects }: { tasks: WorkspaceTask[]; projects
           </div>
         ))}
       </div>
-      {updateStatus.isError ? <p className="err" style={{ padding: "10px 14px" }}>{updateStatus.error.message}</p> : null}
+      {updateTask.isError ? <p className="err" style={{ padding: "10px 14px" }}>{updateTask.error.message}</p> : null}
     </div>
   );
 }

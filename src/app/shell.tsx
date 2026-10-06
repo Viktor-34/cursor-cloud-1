@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useWorkspace } from "../data/workspace";
+import { OpenTaskProvider } from "./task-drawer";
 
 const mainNav = [
   { to: "/", label: "Home", icon: Home, exact: true },
@@ -55,6 +56,7 @@ export function Shell({ children }: { children: ReactNode }) {
   const closeMenu = () => setMenuOpen(false);
 
   return (
+    <OpenTaskProvider>
     <div className={menuOpen ? "shell mnav" : "shell"}>
       {menuOpen ? (
         <button className="side-scrim" type="button" aria-label="Close menu" onClick={() => setMenuOpen(false)} />
@@ -129,6 +131,7 @@ export function Shell({ children }: { children: ReactNode }) {
         </Link>
       </nav>
     </div>
+    </OpenTaskProvider>
   );
 }
 

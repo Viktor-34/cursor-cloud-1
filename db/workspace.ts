@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
-import type { TaskStatus, WorkspaceProject, WorkspaceSnapshot, WorkspaceTask } from "../shared/workspace";
+import type { TaskStatus, WorkspaceMember, WorkspaceProject, WorkspaceSnapshot, WorkspaceTask } from "../shared/workspace";
 import { isTaskStatus } from "../shared/workspace";
-import { addDays, dayDiff, formatDue, localIso, startOfWeek } from "./dates";
+import { addDays, dayDiff, formatDue, isIsoDate, localIso, startOfWeek } from "./dates";
 import { getDb } from "./index";
 import { members, projects, tasks, users, workspaces } from "./schema";
 
@@ -24,15 +24,27 @@ export async function ensureSeed() {
       .values({ name: "Alex Morgan", email: "alex@crm.local" })
       .returning();
     const [workspace] = await db.insert(workspaces).values({ name: "CRM" }).returning();
-    const [member] = await db
-      .insert(members)
-      .values({
-        workspaceId: workspace.id,
-        userId: user.id,
-        role: "owner",
-        title: "Head of Product",
-      })
+    const teammates = await db
+      .insert(users)
+      .values([
+        { name: "Jordan Lee", email: "jordan@crm.local" },
+        { name: "Sam Patel", email: "sam@crm.local" },
+      ])
       .returning();
+    const jordan = teammates.find((person) => person.email === "jordan@crm.local");
+    const sam = teammates.find((person) => person.email === "sam@crm.local");
+    if (!jordan || !sam) throw new Error("Teammates were not created");
+    const insertedMembers = await db
+      .insert(members)
+      .values([
+        { workspaceId: workspace.id, userId: user.id, role: "owner", title: "Head of Product" },
+        { workspaceId: workspace.id, userId: jordan.id, role: "member", title: "Designer" },
+        { workspaceId: workspace.id, userId: sam.id, role: "member", title: "Engineer" },
+      ])
+      .returning();
+    const member = insertedMembers.find((row) => row.userId === user.id);
+    if (!member) throw new Error("Workspace owner was not created");
+    const memberByUser = new Map(insertedMembers.map((row) => [row.userId, row.id]));
 
     const projectRows = await db
       .insert(projects)
@@ -53,11 +65,19 @@ export async function ensureSeed() {
     await db.insert(tasks).values([
       { projectId: projectId("Mobile App"), assigneeId: member.id, title: "Triage beta tester feedback", status: "todo", dueOn: today, position: 0 },
       { projectId: projectId("Website Redesign"), assigneeId: member.id, title: "Weekly design sync notes", status: "todo", dueOn: addDays(today, 2), position: 1 },
-      { projectId: projectId("Product Launch"), assigneeId: member.id, title: "Launch readiness checklist", status: "progress", dueOn: addDays(today, 3), position: 2 },
-      { projectId: projectId("Website Redesign"), assigneeId: member.id, title: "Prepare design system tokens", status: "todo", dueOn: addDays(today, 5), position: 3 },
+      {
+        projectId: projectId("Product Launch"),
+        assigneeId: member.id,
+        title: "Launch readiness checklist",
+        description: "Confirm owners, dates, and the go-live checklist before the review.",
+        status: "progress",
+        dueOn: addDays(today, 3),
+        position: 2,
+      },
+      { projectId: projectId("Website Redesign"), assigneeId: memberByUser.get(jordan.id), title: "Prepare design system tokens", status: "todo", dueOn: addDays(today, 5), position: 3 },
       { projectId: projectId("Product Launch"), assigneeId: member.id, title: "Go / no-go meeting", status: "todo", dueOn: addDays(today, 11), position: 4 },
       { projectId: projectId("Marketing Campaign"), assigneeId: member.id, title: "Launch webinar deck", status: "todo", dueOn: addDays(today, 15), position: 5 },
-      { projectId: projectId("Marketing Campaign"), assigneeId: member.id, title: "Press release draft", status: "todo", dueOn: addDays(today, -1), position: 6 },
+      { projectId: projectId("Marketing Campaign"), assigneeId: memberByUser.get(sam.id), title: "Press release draft", status: "todo", dueOn: addDays(today, -1), position: 6 },
       { projectId: projectId("Website Redesign"), assigneeId: member.id, title: "Fix broken anchor links", status: "done", dueOn: addDays(today, -2), position: 7 },
     ]);
   } catch (error) {
@@ -95,6 +115,25 @@ export async function loadWorkspace(): Promise<WorkspaceSnapshot> {
     .innerJoin(projects, eq(projects.id, tasks.projectId))
     .where(eq(projects.workspaceId, workspace.id));
 
+  const memberRows = await db
+    .select({
+      id: members.id,
+      name: users.name,
+      title: members.title,
+    })
+    .from(members)
+    .innerJoin(users, eq(users.id, members.userId))
+    .where(eq(members.workspaceId, workspace.id));
+  const memberById = new Map(memberRows.map((member) => [member.id, member]));
+  const snapshotMembers: WorkspaceMember[] = memberRows
+    .map((member) => ({
+      id: member.id,
+      name: member.name,
+      initials: initials(member.name),
+      title: member.title ?? "",
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
   const byProject = new Map(projectRows.map((project) => [project.id, project]));
   const mine = allTasks.filter((row) => row.tasks.assigneeId === me.memberId);
   const openMine = mine.filter((row) => row.tasks.status !== "done");
@@ -106,12 +145,12 @@ export async function loadWorkspace(): Promise<WorkspaceSnapshot> {
       if (doneRank !== 0) return doneRank;
       return (a.tasks.dueOn ?? "9999-99-99").localeCompare(b.tasks.dueOn ?? "9999-99-99");
     })
-    .map((row) => toTask(row.tasks, byProject.get(row.tasks.projectId)?.name ?? "Project", today));
+    .map((row) => toTask(row.tasks, byProject.get(row.tasks.projectId)?.name ?? "Project", today, memberById.get(row.tasks.assigneeId ?? "")));
 
   const snapshotAllTasks: WorkspaceTask[] = allTasks
     .slice()
     .sort((a, b) => a.tasks.position - b.tasks.position || a.tasks.title.localeCompare(b.tasks.title))
-    .map((row) => toTask(row.tasks, byProject.get(row.tasks.projectId)?.name ?? "Project", today));
+    .map((row) => toTask(row.tasks, byProject.get(row.tasks.projectId)?.name ?? "Project", today, memberById.get(row.tasks.assigneeId ?? "")));
 
   const snapshotProjects: WorkspaceProject[] = projectRows
     .map((project) => {
@@ -135,14 +174,14 @@ export async function loadWorkspace(): Promise<WorkspaceSnapshot> {
   }).length;
 
   const [firstName, ...rest] = me.name.split(" ");
-  const initials = [firstName, rest.at(-1)]
+  const userInitials = [firstName, rest.at(-1)]
     .filter((part): part is string => Boolean(part))
     .map((part) => part[0]?.toUpperCase() ?? "")
     .join("");
 
   return {
     source: "database",
-    user: { name: me.name, firstName, initials, title: me.title ?? "" },
+    user: { memberId: me.memberId, name: me.name, firstName, initials: userInitials, title: me.title ?? "" },
     workspace: { name: workspace.name },
     stats: {
       activeProjects: active.length,
@@ -155,24 +194,47 @@ export async function loadWorkspace(): Promise<WorkspaceSnapshot> {
     tasks: snapshotTasks,
     allTasks: snapshotAllTasks,
     projects: snapshotProjects,
+    members: snapshotMembers,
   };
 }
 
 function toTask(
-  task: { id: string; title: string; projectId: string; status: TaskStatus; dueOn: string | null },
+  task: {
+    id: string;
+    title: string;
+    description: string | null;
+    projectId: string;
+    status: TaskStatus;
+    dueOn: string | null;
+    assigneeId: string | null;
+  },
   project: string,
   today: string,
+  assignee: { name: string } | undefined,
 ): WorkspaceTask {
   const overdue = Boolean(task.dueOn && task.status !== "done" && dayDiff(task.dueOn, today) < 0);
   return {
     id: task.id,
     title: task.title,
+    description: task.description ?? "",
     project,
     projectId: task.projectId,
     due: formatDue(task.dueOn, today),
+    dueOn: task.dueOn,
     overdue,
     status: task.status,
+    assigneeId: assignee ? task.assigneeId : null,
+    assigneeName: assignee?.name ?? null,
+    assigneeInitials: assignee ? initials(assignee.name) : null,
   };
+}
+
+function initials(name: string) {
+  const parts = name.split(" ").filter(Boolean);
+  return [parts[0], parts.length > 1 ? parts.at(-1) : undefined]
+    .filter((part): part is string => Boolean(part))
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
 }
 
 export async function createTask(input: { title: string; projectId: string; status?: unknown }) {
@@ -201,14 +263,69 @@ export async function createTask(input: { title: string; projectId: string; stat
   return { id: created.id };
 }
 
-export async function updateTaskStatus(id: string, status: unknown) {
-  if (!isTaskStatus(status)) throw new HttpError(400, "Unknown status");
+export async function updateTask(
+  id: string,
+  patch: {
+    title?: unknown;
+    description?: unknown;
+    dueOn?: unknown;
+    assigneeId?: unknown;
+    status?: unknown;
+  },
+) {
   const db = await getDb();
-  const [updated] = await db
-    .update(tasks)
-    .set({ status, updatedAt: new Date() })
-    .where(eq(tasks.id, id))
-    .returning({ id: tasks.id, status: tasks.status });
+  const [existing] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
+  if (!existing) throw new HttpError(404, "Task not found");
+
+  const values: {
+    updatedAt: Date;
+    title?: string;
+    description?: string | null;
+    dueOn?: string | null;
+    assigneeId?: string | null;
+    status?: TaskStatus;
+  } = { updatedAt: new Date() };
+
+  if ("status" in patch) {
+    if (!isTaskStatus(patch.status)) throw new HttpError(400, "Unknown status");
+    values.status = patch.status;
+  }
+  if ("title" in patch) {
+    if (typeof patch.title !== "string" || !patch.title.trim()) throw new HttpError(400, "Title is required");
+    values.title = patch.title.trim();
+  }
+  if ("description" in patch) {
+    if (patch.description !== null && typeof patch.description !== "string") throw new HttpError(400, "Description is invalid");
+    const text = typeof patch.description === "string" ? patch.description.trim() : "";
+    values.description = text || null;
+  }
+  if ("dueOn" in patch) {
+    if (patch.dueOn !== null && (typeof patch.dueOn !== "string" || !isIsoDate(patch.dueOn))) {
+      throw new HttpError(400, "Due date is invalid");
+    }
+    values.dueOn = patch.dueOn;
+  }
+  if ("assigneeId" in patch) {
+    if (patch.assigneeId === null) {
+      values.assigneeId = null;
+    } else if (typeof patch.assigneeId !== "string") {
+      throw new HttpError(400, "Assignee is invalid");
+    } else {
+      const [project] = await db.select().from(projects).where(eq(projects.id, existing.projectId)).limit(1);
+      if (!project) throw new HttpError(404, "Project not found");
+      const [member] = await db
+        .select({ id: members.id })
+        .from(members)
+        .where(and(eq(members.id, patch.assigneeId), eq(members.workspaceId, project.workspaceId)))
+        .limit(1);
+      if (!member) throw new HttpError(400, "Assignee is not in this workspace");
+      values.assigneeId = member.id;
+    }
+  }
+
+  if (Object.keys(values).length === 1) throw new HttpError(400, "Nothing to update");
+
+  const [updated] = await db.update(tasks).set(values).where(eq(tasks.id, id)).returning({ id: tasks.id });
   if (!updated) throw new HttpError(404, "Task not found");
   return updated;
 }

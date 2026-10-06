@@ -10,14 +10,34 @@ export const taskStatusLabel: Record<TaskStatus, string> = {
   done: "Done",
 };
 
+export type WorkspaceMember = {
+  id: string;
+  name: string;
+  initials: string;
+  title: string;
+};
+
 export type WorkspaceTask = {
   id: string;
   title: string;
+  description: string;
   project: string;
   projectId: string;
   due: string;
+  dueOn: string | null;
   overdue: boolean;
   status: TaskStatus;
+  assigneeId: string | null;
+  assigneeName: string | null;
+  assigneeInitials: string | null;
+};
+
+export type TaskPatch = {
+  title?: string;
+  description?: string | null;
+  dueOn?: string | null;
+  assigneeId?: string | null;
+  status?: TaskStatus;
 };
 
 export type WorkspaceProject = {
@@ -30,7 +50,7 @@ export type WorkspaceProject = {
 
 export type WorkspaceSnapshot = {
   source: "database";
-  user: { name: string; firstName: string; initials: string; title: string };
+  user: { memberId: string; name: string; firstName: string; initials: string; title: string };
   workspace: { name: string };
   stats: {
     activeProjects: number;
@@ -44,6 +64,7 @@ export type WorkspaceSnapshot = {
   /** Every task in the workspace, including ones not assigned to the current user. */
   allTasks: WorkspaceTask[];
   projects: WorkspaceProject[];
+  members: WorkspaceMember[];
 };
 
 export function isTaskStatus(value: unknown): value is TaskStatus {
