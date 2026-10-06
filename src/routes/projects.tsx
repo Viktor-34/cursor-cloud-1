@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { Link } from "@tanstack/react-router";
 import { WorkspaceGate } from "../app/gate";
 
 export function ProjectsPage() {
@@ -16,7 +17,9 @@ export function ProjectsPage() {
             {data.projects.map((project) => (
               <article className="panel" key={project.id}>
                 <div className="panel-h">
-                  <h2>{project.name}</h2>
+                  <h2>
+                    <Link to="/projects/$projectId" params={{ projectId: project.id }}>{project.name}</Link>
+                  </h2>
                   <div className="acts">
                     <span className={`badge ${project.status === "At Risk" ? "red" : project.status === "Planning" ? "amber" : "green"}`}>
                       {project.status}

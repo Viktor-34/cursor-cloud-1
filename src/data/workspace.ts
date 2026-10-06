@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { TaskStatus, WorkspaceSnapshot } from "../../shared/workspace";
+import type { TaskStatus, WorkspaceSnapshot, WorkspaceTask } from "../../shared/workspace";
 
 export function useWorkspace() {
   return useQuery({
@@ -15,7 +15,7 @@ export function useWorkspace() {
 export function useCreateTask() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { title: string; projectId: string }) => {
+    mutationFn: async (input: { title: string; projectId: string; status?: TaskStatus }) => {
       const response = await fetch("/api/tasks", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -38,7 +38,25 @@ export function useUpdateTaskStatus() {
       });
       if (!response.ok) throw new Error(await errorMessage(response));
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workspace"] }),
+    onMutate: async (input) => {
+      await queryClient.cancelQueries({ queryKey: ["workspace"] });
+      const previous = queryClient.getQueryData<WorkspaceSnapshot>(["workspace"]);
+      queryClient.setQueryData<WorkspaceSnapshot>(["workspace"], (current) => {
+        if (!current) return current;
+        const move = (task: WorkspaceTask) =>
+          task.id === input.id ? { ...task, status: input.status, overdue: input.status === "done" ? false : task.overdue } : task;
+        return {
+          ...current,
+          tasks: current.tasks.map(move),
+          allTasks: (current.allTasks ?? []).map(move),
+        };
+      });
+      return { previous };
+    },
+    onError: (_error, _input, context) => {
+      if (context?.previous) queryClient.setQueryData(["workspace"], context.previous);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["workspace"] }),
   });
 }
 

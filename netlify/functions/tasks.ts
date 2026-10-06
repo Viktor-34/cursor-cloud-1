@@ -5,11 +5,14 @@ import { jsonError } from "./workspace";
 export default async (req: Request, context: Context) => {
   try {
     if (req.method === "POST") {
-      const body = (await req.json()) as { title?: unknown; projectId?: unknown };
+      const body = (await req.json()) as { title?: unknown; projectId?: unknown; status?: unknown };
       if (typeof body.title !== "string" || typeof body.projectId !== "string") {
         return Response.json({ error: "Title and project are required" }, { status: 400 });
       }
-      return Response.json(await createTask({ title: body.title, projectId: body.projectId }), { status: 201 });
+      return Response.json(
+        await createTask({ title: body.title, projectId: body.projectId, status: body.status }),
+        { status: 201 },
+      );
     }
 
     if (req.method === "PATCH") {

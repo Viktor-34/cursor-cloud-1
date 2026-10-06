@@ -17,6 +17,7 @@ import {
   Users,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
+import { useWorkspace } from "../data/workspace";
 
 const mainNav = [
   { to: "/", label: "Home", icon: Home, exact: true },
@@ -75,12 +76,7 @@ export function Shell({ children }: { children: ReactNode }) {
               <NavButton key={item.label} {...item} pathname={pathname} onNavigate={closeMenu} />
             ))}
           </div>
-          <div className="sgroup">
-            <div className="sgroup-h">Projects</div>
-            <NavButton to="/projects" label="Website Redesign" icon={Folder} pathname={pathname} match={false} onNavigate={closeMenu} />
-            <NavButton to="/projects" label="Mobile App" icon={Folder} pathname={pathname} match={false} onNavigate={closeMenu} />
-            <NavButton to="/projects" label="Product Launch" icon={Folder} pathname={pathname} match={false} onNavigate={closeMenu} />
-          </div>
+          <ProjectNav pathname={pathname} onNavigate={closeMenu} />
         </div>
         <div className="side-bot">
           <button className="sitem" type="button" onClick={() => { closeMenu(); void navigate({ to: "/settings" }); }}>
@@ -132,6 +128,37 @@ export function Shell({ children }: { children: ReactNode }) {
           More
         </Link>
       </nav>
+    </div>
+  );
+}
+
+function ProjectNav({ pathname, onNavigate }: { pathname: string; onNavigate: () => void }) {
+  const workspace = useWorkspace();
+  const navigate = useNavigate();
+  const projects = workspace.data?.projects ?? [];
+
+  return (
+    <div className="sgroup">
+      <div className="sgroup-h">Projects</div>
+      {projects.map((project) => {
+        const href = `/projects/${project.id}`;
+        const on = pathname === href;
+        return (
+          <button
+            key={project.id}
+            className={on ? "sitem on" : "sitem"}
+            type="button"
+            aria-current={on ? "page" : undefined}
+            onClick={() => {
+              onNavigate();
+              void navigate({ to: "/projects/$projectId", params: { projectId: project.id } });
+            }}
+          >
+            <Folder size={16} className="i" />
+            <span className="trunc">{project.name}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }

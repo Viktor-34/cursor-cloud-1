@@ -2,6 +2,14 @@ export const taskStatuses = ["backlog", "todo", "progress", "review", "done"] as
 
 export type TaskStatus = (typeof taskStatuses)[number];
 
+export const taskStatusLabel: Record<TaskStatus, string> = {
+  backlog: "Backlog",
+  todo: "To do",
+  progress: "In progress",
+  review: "Review",
+  done: "Done",
+};
+
 export type WorkspaceTask = {
   id: string;
   title: string;
@@ -33,6 +41,8 @@ export type WorkspaceSnapshot = {
     overdue: number;
   };
   tasks: WorkspaceTask[];
+  /** Every task in the workspace, including ones not assigned to the current user. */
+  allTasks: WorkspaceTask[];
   projects: WorkspaceProject[];
 };
 

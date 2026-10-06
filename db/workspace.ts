@@ -108,6 +108,11 @@ export async function loadWorkspace(): Promise<WorkspaceSnapshot> {
     })
     .map((row) => toTask(row.tasks, byProject.get(row.tasks.projectId)?.name ?? "Project", today));
 
+  const snapshotAllTasks: WorkspaceTask[] = allTasks
+    .slice()
+    .sort((a, b) => a.tasks.position - b.tasks.position || a.tasks.title.localeCompare(b.tasks.title))
+    .map((row) => toTask(row.tasks, byProject.get(row.tasks.projectId)?.name ?? "Project", today));
+
   const snapshotProjects: WorkspaceProject[] = projectRows
     .map((project) => {
       const projectTasks = allTasks.filter((row) => row.tasks.projectId === project.id);
@@ -148,6 +153,7 @@ export async function loadWorkspace(): Promise<WorkspaceSnapshot> {
       overdue: openMine.filter((row) => row.tasks.dueOn && dayDiff(row.tasks.dueOn, today) < 0).length,
     },
     tasks: snapshotTasks,
+    allTasks: snapshotAllTasks,
     projects: snapshotProjects,
   };
 }
@@ -169,9 +175,11 @@ function toTask(
   };
 }
 
-export async function createTask(input: { title: string; projectId: string }) {
+export async function createTask(input: { title: string; projectId: string; status?: unknown }) {
   const title = input.title.trim();
   if (!title) throw new HttpError(400, "Title is required");
+  const status = input.status === undefined ? "todo" : input.status;
+  if (!isTaskStatus(status)) throw new HttpError(400, "Unknown status");
   await ensureSeed();
   const db = await getDb();
   const [project] = await db.select().from(projects).where(eq(projects.id, input.projectId)).limit(1);
@@ -187,7 +195,7 @@ export async function createTask(input: { title: string; projectId: string }) {
       projectId: project.id,
       assigneeId: owner?.id,
       title,
-      status: "todo",
+      status,
     })
     .returning();
   return { id: created.id };

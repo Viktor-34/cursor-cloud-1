@@ -5,6 +5,7 @@ import {
   Outlet,
 } from "@tanstack/react-router";
 import { Shell } from "./app/shell";
+import { ProjectBoardPage } from "./routes/board";
 import { CalendarPage } from "./routes/calendar";
 import { HomePage } from "./routes/home";
 import { MyTasksPage } from "./routes/my-tasks";
@@ -35,6 +36,12 @@ const projectsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/projects",
   component: ProjectsPage,
+});
+
+const projectBoardRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/projects/$projectId",
+  component: ProjectBoardPage,
 });
 
 const calendarRoute = createRoute({
@@ -92,6 +99,7 @@ const routeTree = rootRoute.addChildren([
   myTasksRoute,
   overviewRoute,
   projectsRoute,
+  projectBoardRoute,
   calendarRoute,
   timelineRoute,
   membersRoute,

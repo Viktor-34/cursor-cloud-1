@@ -34,6 +34,31 @@
 .task-add .select { width: 190px; flex-shrink: 0; }
 .trow .select { height: var(--h-sm); font-size: var(--fs-xs); }
 
+a.project-name { font-weight: 500; }
+a.project-name:hover,
+.panel h2 a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+.toolbar .board-title {
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.board-error { padding: 0 20px; }
+
+.kcard .status-move {
+  width: auto;
+  max-width: 132px;
+  height: 24px;
+  margin-left: auto;
+  font-size: var(--fs-2xs);
+  padding-right: 22px;
+  background-position: right 6px center;
+}
+
+.empty-col { margin: 2px 4px 6px; font-size: var(--fs-xs); }
+
 @media (max-width: 640px) {
   .task-add { flex-wrap: wrap; }
   .task-add .select, .task-add .btn { width: 100%; }

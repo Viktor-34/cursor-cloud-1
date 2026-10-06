@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { Link } from "@tanstack/react-router";
 import { WorkspaceGate } from "../app/gate";
 import { greeting, todayLabel } from "../data/workspace";
 import { TaskList } from "./task-list";
@@ -34,7 +35,9 @@ export function HomePage() {
               <div className="panel-b">
                 {data.projects.map((project) => (
                   <div className="row" key={project.id} style={{ minHeight: 40, gap: 12 }}>
-                    <span className="trunc grow">{project.name}</span>
+                    <Link className="trunc grow project-name" to="/projects/$projectId" params={{ projectId: project.id }}>
+                      {project.name}
+                    </Link>
                     <span className={`badge ${project.status === "At Risk" ? "red" : project.status === "Planning" ? "amber" : "green"}`}>
                       {project.status}
                     </span>

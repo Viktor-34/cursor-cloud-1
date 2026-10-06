@@ -1,16 +1,9 @@
 import type { CSSProperties, FormEvent } from "react";
 import { useState } from "react";
-import { taskStatuses, type TaskStatus, type WorkspaceProject, type WorkspaceTask } from "../../shared/workspace";
+import { taskStatusLabel, taskStatuses, type TaskStatus, type WorkspaceProject, type WorkspaceTask } from "../../shared/workspace";
 import { useCreateTask, useUpdateTaskStatus } from "../data/workspace";
 
 const columns = "minmax(0,1.6fr) 150px 132px 88px";
-const statusLabel: Record<TaskStatus, string> = {
-  backlog: "Backlog",
-  todo: "To do",
-  progress: "In progress",
-  review: "Review",
-  done: "Done",
-};
 
 export function TaskList({ tasks, projects }: { tasks: WorkspaceTask[]; projects: WorkspaceProject[] }) {
   const createTask = useCreateTask();
@@ -73,7 +66,7 @@ export function TaskList({ tasks, projects }: { tasks: WorkspaceTask[]; projects
                 }}
               >
                 {taskStatuses.map((status) => (
-                  <option key={status} value={status}>{statusLabel[status]}</option>
+                  <option key={status} value={status}>{taskStatusLabel[status]}</option>
                 ))}
               </select>
             </div>
