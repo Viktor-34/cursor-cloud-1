@@ -1,3 +1,5 @@
+html:has(.shell) { height: 100%; }
+
 .nav-toggle { display: none; }
 
 @media (max-width: 900px) {
@@ -37,6 +39,8 @@
 a.project-name { font-weight: 500; }
 a.project-name:hover,
 .panel h2 a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+.page.flush .board { align-items: stretch; }
 
 .toolbar .board-title {
   margin: 0;
